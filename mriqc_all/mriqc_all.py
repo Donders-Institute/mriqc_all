@@ -12,7 +12,7 @@ import sys
 sys.path.insert(0, '/opt/mriqc/dccn')
 from mriqc_sub import main as mriqc_sub
 from pathlib import Path
-from bidscoin import bidsmapper, bidscoiner
+from bidscoin import bidscoiner
 
 
 def run_mriqc_all(date: str, outfolder: str, cleanup: bool):
@@ -67,8 +67,7 @@ def run_mriqc_all(date: str, outfolder: str, cleanup: bool):
             mriqcfolder = Path(outfolder)/rawfolder.name
             bidsfolder  = Path(outfolder)/'bids'/rawfolder.name
             print(f"Processing: {rawfolder} -> {mriqcfolder}")
-            bidsmapper.bidsmapper(rawfolder, bidsfolder, 'bidsmap.yaml', Path(__file__).parent/'bidsmap_mriqc.yaml', [], 'sub-', 'ses-', noedit=True)
-            bidscoiner.bidscoiner(rawfolder, bidsfolder)
+            bidscoiner.bidscoiner(rawfolder, bidsfolder, bidsmapfile=Path(__file__).parent/'bidsmap_mriqc.yaml')
             mriqc_sub(bidsfolder, mriqcfolder, '', argstr=f"; rm -r {bidsfolder}" if cleanup else '', skip=False)
             if rawfile:
                 shutil.rmtree(rawfolder)
