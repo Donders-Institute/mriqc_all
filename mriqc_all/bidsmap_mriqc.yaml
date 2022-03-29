@@ -940,7 +940,7 @@ DICOM:
   - provenance:
     attributes: &extra_data_attributes_dicom
       Modality:
-      ProtocolName:
+      ProtocolName: .*
       SeriesDescription:
       ImageType:
       SequenceName:
@@ -1028,3 +1028,10 @@ DICOM:
     bids:
       <<: *leaveout_bids_dicom
       rec: DERIVED
+  - provenance:
+    attributes:
+      <<: *leaveout_attributes_dicom
+      ImageType: .*'PHYSIO'.*
+    bids:
+      <<: *leaveout_bids_dicom
+      suffix: physio

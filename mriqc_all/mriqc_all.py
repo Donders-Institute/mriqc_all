@@ -8,6 +8,7 @@ import tarfile
 import zipfile
 import tempfile
 import shutil
+import os
 import sys
 sys.path.insert(0, '/opt/mriqc/dccn')
 from mriqc_sub import main as mriqc_sub
@@ -18,7 +19,8 @@ from bidscoin import bidscoiner
 def run_mriqc_all(date: str, outfolder: str, cleanup: bool):
     """Processes selected folders in the catch-all collection"""
 
-    rootfolder = Path('/project/3055010.01/raw')
+    rootfolder  = Path('/project/3055010.01/raw')
+    bidsmapfile = Path(__file__).parent/'bidsmap_mriqc.yaml'
 
     # Parse the datefolders
     if date == 'all':
@@ -42,14 +44,14 @@ def run_mriqc_all(date: str, outfolder: str, cleanup: bool):
             return
 
     # Loop over the raw data-folders inside the datefolders
-    for datefolder in datefolders:
+    for datefolder in sorted(datefolders, reverse=True):
         for rawfolder in datefolder.iterdir():
 
-            # Unpack old zipped data to a temporary folder
+            # Unpack old zipped session data to a temporary rawfolder
             rawfile = None
             if rawfolder.is_file():
-                if rawfolder.suffix in ('.zip','.gz','.tar'):
-                    rawfile   = rawfolder
+                rawfile = rawfolder
+                if rawfile.suffix in ('.zip','.gz','.tar'):
                     rawfolder = Path(tempfile.mkdtemp())/rawfile.with_suffix('').stem
                     ext       = rawfile.suffixes
                     print(f"Extracting: {rawfile} -> {rawfolder}")
@@ -66,9 +68,10 @@ def run_mriqc_all(date: str, outfolder: str, cleanup: bool):
             # Process the raw data-folder
             mriqcfolder = Path(outfolder)/rawfolder.name
             bidsfolder  = Path(outfolder)/'bids'/rawfolder.name
+            mriqc_group = f"; singularity run --cleanenv {os.getenv('DCCN_OPT_DIR')}/mriqc/{os.getenv('MRIQC_VERSION')}/mriqc-{os.getenv('MRIQC_VERSION')}.simg {bidsfolder} {mriqcfolder} group --nprocs 1"
             print(f"Processing: {rawfolder} -> {mriqcfolder}")
-            bidscoiner.bidscoiner(rawfolder, bidsfolder, bidsmapfile=Path(__file__).parent/'bidsmap_mriqc.yaml')
-            mriqc_sub(bidsfolder, mriqcfolder, '', argstr=f"; rm -r {bidsfolder}" if cleanup else '', skip=False)
+            bidscoiner.bidscoiner(rawfolder, bidsfolder, bidsmapfile=bidsmapfile)
+            mriqc_sub(bidsfolder, mriqcfolder, '', argstr=f"{mriqc_group}; rm -r {bidsfolder}" if cleanup else mriqc_group, skip=False)
             if rawfile:
                 shutil.rmtree(rawfolder)
 
