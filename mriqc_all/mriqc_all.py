@@ -16,7 +16,7 @@ from pathlib import Path
 from bidscoin import bidscoiner
 
 
-def run_mriqc_all(date: str, outfolder: str, cleanup: bool):
+def run_mriqc_all(date: str, outfolder: str):
     """Processes selected folders in the catch-all collection"""
 
     rootfolder  = Path('/project/3055010.01/raw')
@@ -71,7 +71,7 @@ def run_mriqc_all(date: str, outfolder: str, cleanup: bool):
             mriqc_group = f"; singularity run --cleanenv {os.getenv('DCCN_OPT_DIR')}/mriqc/{os.getenv('MRIQC_VERSION')}/mriqc-{os.getenv('MRIQC_VERSION')}.simg {bidsfolder} {mriqcfolder} group --nprocs 1"
             print(f"Processing: {rawfolder} -> {mriqcfolder}")
             bidscoiner.bidscoiner(rawfolder, bidsfolder, bidsmapfile=bidsmapfile)
-            mriqc_sub(bidsfolder, mriqcfolder, '', argstr=f"{mriqc_group}; rm -r {bidsfolder}" if cleanup else mriqc_group, skip=False)
+            mriqc_sub(bidsfolder, mriqcfolder, '', argstr=mriqc_group, skip=False)
             if rawfile:
                 shutil.rmtree(rawfolder)
 
@@ -87,15 +87,14 @@ def main():
                                             "  run_mriqc_all\n"
                                             "  run_mriqc_all -d 20220325\n"
                                             "  run_mriqc_all -d today\n"
-                                            "  run_mriqc_all -d all -c\n"
+                                            "  run_mriqc_all -d all\n"
                                             "  run_mriqc_all -o test/mriqc_data\n ")
     parser.add_argument('-d','--date',      help='The date of the catch_all/raw/year/[date]/ folders that needs to be run', default='yesterday')
     parser.add_argument('-o','--outfolder', help='The mriqc output folder', default='/project/3015999.02/mriqc_data')
-    parser.add_argument('-c','--cleanup',   help='Flag to clean-up the BIDS data once mriqc is ready', action='store_true')
 
     args = parser.parse_args()
 
-    run_mriqc_all(date=args.date, outfolder=args.outfolder, cleanup=args.cleanup)
+    run_mriqc_all(date=args.date, outfolder=args.outfolder)
 
 
 if __name__ == '__main__':
