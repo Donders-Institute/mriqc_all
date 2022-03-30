@@ -28,6 +28,9 @@ def run_mriqc_all(date: str, outfolder: str, force: bool=False):
         datefolders = []
         for year in catchallraw.glob('20*'):
             for datefolder in year.glob(year.name + '*'):
+                if datefolder.name == pdt.datetime.datetime.now().date().strftime('%Y%m%d'):
+                    print(f"NB: SKIPPING TODAY's FOLDER: {datefolder}")
+                    continue
                 datefolders += [datefolder]
     else:
         try:
