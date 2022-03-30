@@ -19,13 +19,13 @@ from bidscoin import bidscoiner
 def run_mriqc_all(date: str, outfolder: str):
     """Processes selected folders in the catch-all collection"""
 
-    rootfolder  = Path('/project/3055010.01/raw')
+    catchallraw = Path('/project/3055010.01/raw')
     bidsmapfile = Path(__file__).parent/'bidsmap_mriqc.yaml'
 
     # Parse the datefolders
     if date == 'all':
         datefolders = []
-        for year in rootfolder.glob('20*'):
+        for year in catchallraw.glob('20*'):
             for datefolder in year.glob('20*'):
                 datefolders += [datefolder]
     else:
@@ -38,7 +38,7 @@ def run_mriqc_all(date: str, outfolder: str):
             else:
                 print(f"Could not parse: {date}")
                 return
-        datefolders = [rootfolder / f"{datetime.year}" / f"{datetime.year}{datetime.month:02d}{datetime.day:02d}"]
+        datefolders = [catchallraw / f"{datetime.year}" / f"{datetime.year}{datetime.month:02d}{datetime.day:02d}"]
         if not datefolders[0].is_dir():
             print(f"Directory not found: {datefolders[0]}")
             return
@@ -52,7 +52,7 @@ def run_mriqc_all(date: str, outfolder: str):
             if rawfolder.is_file():
                 rawfile = rawfolder
                 if rawfile.suffix in ('.zip','.gz','.tar'):
-                    rawfolder = Path(tempfile.mkdtemp())/rawfile.with_suffix('').stem
+                    rawfolder = Path(tempfile.mkdtemp())/rawfile.name.replace('.zip','').replace('.gz','').replace('.tar','')
                     ext       = rawfile.suffixes
                     print(f"Extracting: {rawfile} -> {rawfolder}")
                     if ext[-1] == '.zip':
