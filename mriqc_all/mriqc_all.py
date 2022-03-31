@@ -61,6 +61,10 @@ def run_mriqc_all(date: str, outfolder: str, force: bool=False):
             # Unpack old zipped session data to a temporary rawfolder
             rawfile = None
             if rawfolder.is_file():
+                print(f"Skipping quasi organized data in: {rawfile}")
+                continue
+
+                # Code below is to process the pre-2018 data, i.e. data not organized according to raw/project/subject/session/series (would require a lot of ugly hacking)
                 rawfile = rawfolder
                 if rawfile.suffix in ('.zip','.gz','.tar'):
                     rawfolder = Path(tempfile.mkdtemp())/rawfile.name.replace('.zip','').replace('.gz','').replace('.tar','')
