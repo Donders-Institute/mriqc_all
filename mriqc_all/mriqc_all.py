@@ -4,10 +4,6 @@
 import argparse
 import dateutil.parser
 import parsedatetime as pdt
-import tarfile
-import zipfile
-import tempfile
-import shutil
 import os
 import sys
 sys.path.insert(0, '/opt/mriqc/dccn')
@@ -59,26 +55,9 @@ def run_mriqc_all(date: str, outfolder: str, force: bool=False):
         for rawfolder in datefolder.iterdir():
 
             # Unpack old zipped session data to a temporary rawfolder
-            rawfile = None
             if rawfolder.is_file():
-                print(f"Skipping quasi organized data in: {rawfile}")
+                print(f"Skipping quasi organized data in: {rawfolder}")
                 continue
-
-                # Code below is to process the pre-2018 data, i.e. data not organized according to raw/project/subject/session/series (would require a lot of ugly hacking)
-                rawfile = rawfolder
-                if rawfile.suffix in ('.zip','.gz','.tar'):
-                    rawfolder = Path(tempfile.mkdtemp())/rawfile.name.replace('.zip','').replace('.gz','').replace('.tar','')
-                    ext       = rawfile.suffixes
-                    print(f"Extracting: {rawfile} -> {rawfolder}")
-                    if ext[-1] == '.zip':
-                        with zipfile.ZipFile(rawfile, 'r') as zip_fid:
-                            zip_fid.extractall(rawfolder)
-                    elif '.tar' in ext:
-                        with tarfile.open(rawfile, 'r') as tar_fid:
-                            tar_fid.extractall(rawfolder)
-                else:
-                    print(f"Skipping unexpected file: {rawfile}")
-                    continue
 
             # Process the raw data-folder
             mriqcfolder = outfolder/rawfolder.name
@@ -87,8 +66,6 @@ def run_mriqc_all(date: str, outfolder: str, force: bool=False):
             print(f"Processing: {rawfolder} -> {mriqcfolder}")
             bidscoiner.bidscoiner(rawfolder, bidsfolder, bidsmapfile=bidsmapfile)
             mriqc_sub(bidsfolder, mriqcfolder, '', argstr=mriqc_group, skip=False)
-            if rawfile:
-                shutil.rmtree(rawfolder)
 
         # Write a datefolder log entry with the current datetime
         logfile.write_text(pdt.datetime.datetime.now().isoformat())
