@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Clean-up processed sub-/ses-folders in the bidsfolder"""
+"""Clean-up processed sub-/ses-folders in the BIDS sourcedata folder"""
 
 from pathlib import Path
 
 mriqcroot = Path('/project/3015999.02/mriqc_data')
-bidsroot  = mriqcroot/'bids'
+bidsroot  = mriqcroot/'sourcedata'
 
 # Loop over the bids-folders inside the bids project-folders
 for bidsfolder in bidsroot.iterdir():

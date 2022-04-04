@@ -46,8 +46,8 @@ def run_mriqc_all(date: str, outfolder: str, force: bool=False):
     # Loop over the raw data-folders inside the datefolders
     for datefolder in sorted(datefolders, reverse=True):
 
-        # Check the log if we have processed this before
-        logfile = outfolder/'log'/datefolder.name
+        # Check the logs if we have processed this before
+        logfile = outfolder/'logs'/datefolder.name
         if not force and logfile.is_file():
             print(f"Skipping processed folder: {datefolder}")
             continue
@@ -61,7 +61,7 @@ def run_mriqc_all(date: str, outfolder: str, force: bool=False):
 
             # Process the raw data-folder
             mriqcfolder = outfolder/rawfolder.name
-            bidsfolder  = outfolder/'bids'/rawfolder.name
+            bidsfolder  = outfolder/'sourcedata'/rawfolder.name
             mriqc_group = f"; singularity run --cleanenv {os.getenv('DCCN_OPT_DIR')}/mriqc/{os.getenv('MRIQC_VERSION')}/mriqc-{os.getenv('MRIQC_VERSION')}.simg {bidsfolder} {mriqcfolder} group --nprocs 1"
             print(f"Processing: {rawfolder} -> {mriqcfolder}")
             bidscoiner.bidscoiner(rawfolder, bidsfolder, bidsmapfile=bidsmapfile)
