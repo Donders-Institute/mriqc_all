@@ -12,7 +12,7 @@ from pathlib import Path
 from bidscoin import bidscoiner
 
 
-def run_mriqc_all(date: str, outfolder: str, force: bool=False):
+def run_mriqc_all(date: str, outfolder: str, force: bool=False, dryrun: bool=False):
     """Processes selected folders in the catch-all collection"""
 
     catchallraw = Path('/project/3055010.01/raw')
@@ -64,11 +64,13 @@ def run_mriqc_all(date: str, outfolder: str, force: bool=False):
             bidsfolder  = outfolder/'sourcedata'/rawfolder.name
             mriqc_group = f"; singularity run --cleanenv {os.getenv('DCCN_OPT_DIR')}/mriqc/{os.getenv('MRIQC_VERSION')}/mriqc-{os.getenv('MRIQC_VERSION')}.simg {bidsfolder} {mriqcfolder} group --nprocs 1"
             print(f"Processing: {rawfolder} -> {mriqcfolder}")
-            bidscoiner.bidscoiner(rawfolder, bidsfolder, bidsmapfile=bidsmapfile)
-            mriqc_sub(bidsfolder, mriqcfolder, '', argstr=mriqc_group, skip=False)
+            if not dryrun:
+                bidscoiner.bidscoiner(rawfolder, bidsfolder, bidsmapfile=bidsmapfile)
+                mriqc_sub(bidsfolder, mriqcfolder, '', argstr=mriqc_group, skip=False)
 
         # Write a datefolder log entry with the current datetime
-        logfile.write_text(pdt.datetime.datetime.now().isoformat())
+        if not dryrun:
+            logfile.write_text(pdt.datetime.datetime.now().isoformat())
 
 
 def main():
@@ -87,10 +89,11 @@ def main():
     parser.add_argument('-d','--date',      help='The date of the catch_all/raw/year/[date]/ folders that needs to be run', default='yesterday')
     parser.add_argument('-o','--outfolder', help='The mriqc output folder', default='/project/3015999.02/mriqc_data')
     parser.add_argument('-f','--force',     help='If this flag is given data will be processed, regardless of existing logfiles in the log-folder', action='store_true')
+    parser.add_argument('--dryrun',         help='Add this flag to just print the new directories without actually running or submitting anything (useful for debugging)', action='store_true')
 
     args = parser.parse_args()
 
-    run_mriqc_all(date=args.date, outfolder=args.outfolder, force=args.force)
+    run_mriqc_all(date=args.date, outfolder=args.outfolder, force=args.force, dryrun=args.dryrun)
 
 
 if __name__ == '__main__':
