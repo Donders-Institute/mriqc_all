@@ -20,9 +20,9 @@ def run_mriqc_all(date: str, outfolder: str, force: bool=False, dryrun: bool=Fal
     outfolder   = Path(outfolder)
 
     # Parse the datefolders
-    if date == 'all':
+    if date == 'all' or '*' in date:
         datefolders = []
-        for year in catchallraw.glob('20*'):
+        for year in catchallraw.glob('20*' if date=='all' else date):
             for datefolder in year.glob(year.name + '*'):
                 if datefolder.name == pdt.datetime.datetime.now().date().strftime('%Y%m%d'):
                     print(f"NB: SKIPPING TODAY's FOLDER: {datefolder}")
@@ -83,6 +83,7 @@ def main():
                                      epilog="examples:\n"
                                             "  run_mriqc_all\n"
                                             "  run_mriqc_all -d 20220325\n"
+                                            "  run_mriqc_all -d 2021*\n"
                                             "  run_mriqc_all -d today -f\n"
                                             "  run_mriqc_all -d all\n"
                                             "  run_mriqc_all -o test/mriqc_data\n ")

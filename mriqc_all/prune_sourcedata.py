@@ -11,7 +11,7 @@ for bidsfolder in bidsroot.iterdir():
     for subfolder in bidsfolder.glob('sub-*'):
         for sesfolder in subfolder.glob('ses-*'):
 
-            # Delete the bids-folder if there a mriqc html output file
+            # Delete the bids-folder if there is a mriqc html output file
             reports = list((mriqcroot/bidsfolder.name).glob(f"{subfolder.name}_{sesfolder.name}_*.html"))
             if reports:
                 print(f"Found {len(reports)} mriqc-reports, deleting nifti-files in: {sesfolder}")
