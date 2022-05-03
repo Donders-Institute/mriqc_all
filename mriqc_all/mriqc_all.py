@@ -4,6 +4,8 @@
 import argparse
 import dateutil.parser
 import parsedatetime as pdt
+import time
+import subprocess
 import os
 import sys
 sys.path.insert(0, '/opt/mriqc/dccn')
@@ -18,6 +20,7 @@ def run_mriqc_all(date: str, outfolder: str, force: bool=False, dryrun: bool=Fal
     catchallraw = Path('/project/3055010.01/raw')
     bidsmapfile = Path(__file__).parent/'bidsmap_mriqc.yaml'
     outfolder   = Path(outfolder)
+    maxrunning  = 500
 
     # Parse the datefolders
     if date == 'all' or '*' in date:
@@ -48,11 +51,19 @@ def run_mriqc_all(date: str, outfolder: str, force: bool=False, dryrun: bool=Fal
 
         # Check the logs if we have processed this before
         logfile = outfolder/'logs'/datefolder.name
+        logfile.parent.mkdir(parents=True, exist_ok=True)
         if not force and logfile.is_file():
             print(f"Skipping processed folder: {datefolder}")
             continue
 
         for rawfolder in datefolder.iterdir():
+
+            # Wait until there are less than maxrunning jobs
+            running = subprocess.run('if [ ! -z "$(qselect -s RQH)" ]; then qstat -f $(qselect -s RQH) | grep Job_Name | grep mriqc_sub- | wc -l; fi', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            if running.stdout.decode():
+                while int(running.stdout.decode()) > maxrunning:
+                    print(f"Pausing 10 minutes because there are more than {maxrunning} job running already...")
+                    time.sleep(10*60)
 
             # Unpack old zipped session data to a temporary rawfolder
             if rawfolder.is_file():
