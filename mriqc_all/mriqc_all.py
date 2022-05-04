@@ -20,7 +20,7 @@ def run_mriqc_all(date: str, outfolder: str, force: bool=False, dryrun: bool=Fal
     catchallraw = Path('/project/3055010.01/raw')
     bidsmapfile = Path(__file__).parent/'bidsmap_mriqc.yaml'
     outfolder   = Path(outfolder)
-    maxrunning  = 500
+    maxrunning  = 350               # MOAB: MAXJOB = 400
 
     # Parse the datefolders
     if date == 'all' or '*' in date:
@@ -73,7 +73,7 @@ def run_mriqc_all(date: str, outfolder: str, force: bool=False, dryrun: bool=Fal
             # Process the raw data-folder
             mriqcfolder = outfolder/rawfolder.name
             bidsfolder  = outfolder/'sourcedata'/rawfolder.name
-            mriqc_group = f"; singularity run --cleanenv {os.getenv('DCCN_OPT_DIR')}/mriqc/{os.getenv('MRIQC_VERSION')}/mriqc-{os.getenv('MRIQC_VERSION')}.simg {bidsfolder} {mriqcfolder} group --nprocs 1"
+            mriqc_group = f" --no-sub; singularity run --cleanenv {os.getenv('DCCN_OPT_DIR')}/mriqc/{os.getenv('MRIQC_VERSION')}/mriqc-{os.getenv('MRIQC_VERSION')}.simg {bidsfolder} {mriqcfolder} group --nprocs 1"
             print(f"Processing: {rawfolder} -> {mriqcfolder}")
             if not dryrun:
                 bidscoiner.bidscoiner(rawfolder, bidsfolder, bidsmapfile=bidsmapfile)
