@@ -7,11 +7,7 @@ import parsedatetime as pdt
 import time
 import subprocess
 import os
-import sys
-sys.path.insert(0, '/opt/mriqc/dccn')
-from mriqc_sub import main as mriqc_sub
 from pathlib import Path
-from bidscoin import bidscoiner
 
 
 def run_mriqc_all(date: str, outfolder: str, force: bool=False, dryrun: bool=False):
@@ -65,7 +61,7 @@ def run_mriqc_all(date: str, outfolder: str, force: bool=False, dryrun: bool=Fal
                     print(f"Pausing 10 minutes because there are more than {maxrunning} job running already...")
                     time.sleep(10*60)
 
-            # Unpack old zipped session data to a temporary rawfolder
+            # TODO: Unpack old zipped session data to a temporary rawfolder?
             if rawfolder.is_file():
                 print(f"Skipping quasi organized data in: {rawfolder}")
                 continue
@@ -73,11 +69,15 @@ def run_mriqc_all(date: str, outfolder: str, force: bool=False, dryrun: bool=Fal
             # Process the raw data-folder
             mriqcfolder = outfolder/rawfolder.name
             bidsfolder  = outfolder/'sourcedata'/rawfolder.name
-            mriqc_group = f" --no-sub; singularity run --cleanenv {os.getenv('DCCN_OPT_DIR')}/mriqc/{os.getenv('MRIQC_VERSION')}/mriqc-{os.getenv('MRIQC_VERSION')}.simg {bidsfolder} {mriqcfolder} group --nprocs 1"
-            print(f"Processing: {rawfolder} -> {mriqcfolder}")
+            mriqc_group = f"; singularity run --cleanenv {os.getenv('DCCN_OPT_DIR')}/mriqc/{os.getenv('MRIQC_VERSION')}/mriqc-{os.getenv('MRIQC_VERSION')}.simg {bidsfolder} {mriqcfolder} group --nprocs 1"
+            print(f"Submitting: {rawfolder} -> {mriqcfolder}")
             if not dryrun:
-                bidscoiner.bidscoiner(rawfolder, bidsfolder, bidsmapfile=bidsmapfile)
-                mriqc_sub(bidsfolder, mriqcfolder, '', argstr=mriqc_group, skip=False)
+                qsub    = f"qsub -l walltime=8:00:00,mem=18gb,file=50gb -N mriqc_job_{rawfolder}"
+                mriqc   = f"module load mriqc; source activate {Path(__file__).parent.parent/'env'}; {Path(__file__).parent}/mriqc_job.py {rawfolder} {bidsfolder} {bidsmapfile} {mriqcfolder} '{mriqc_group}'"
+                command = f"{qsub} <<EOF\n{mriqc}\nEOF"
+                process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+                if process.stderr.decode('utf-8') or process.returncode != 0:
+                    print(f"ERROR {process.returncode}: Job submission failed\n{process.stderr.decode('utf-8')}\n{process.stdout.decode('utf-8')}")
 
         # Write a datefolder log entry with the current datetime
         if not dryrun:
