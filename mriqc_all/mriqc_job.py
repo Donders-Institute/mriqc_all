@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
 """bidscoiner / mriqc_sub wrapper function for mriqc_all"""
 
-import sys
 import argparse
+import tempfile
+import sys
 sys.path.insert(0, '/opt/mriqc/dccn')
 from mriqc_sub import main as mriqc_sub
 from bidscoin import bidscoiner
+from pathlib import Path
+from distutils.dir_util import copy_tree
 
 
 def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, mriqc_group):
 
-    bidscoiner.bidscoiner(rawfolder, bidsfolder, bidsmapfile=bidsmapfile)
-    mriqc_sub(bidsfolder, mriqcfolder, '', args=mriqc_group, skip=False, nosub=True)
+    bidswork = Path(tempfile.gettempdir())/Path(bidsfolder).name
+    bidscoiner.bidscoiner(rawfolder, bidswork, bidsmapfile=bidsmapfile)
+    mriqc_sub(bidswork, mriqcfolder, '', args=mriqc_group, skip=False, nosub=True)
+    for niifile in bidswork.rglob('sub-*.nii*'):
+        niifile.unlink()
+    copy_tree(bidswork, bidsfolder)
 
 
 parser = argparse.ArgumentParser()
