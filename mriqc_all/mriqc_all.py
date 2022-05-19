@@ -6,7 +6,6 @@ import dateutil.parser
 import parsedatetime as pdt
 import time
 import subprocess
-import os
 from pathlib import Path
 
 

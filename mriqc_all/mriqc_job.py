@@ -8,6 +8,7 @@ import os
 import sys
 sys.path.insert(0, '/opt/mriqc/dccn')
 from mriqc_sub import main as mriqc_sub
+from mriqc_meta import mriqc_meta as mriqc_meta
 from bidscoin import bidscoiner
 from pathlib import Path
 from distutils.dir_util import copy_tree
@@ -31,10 +32,19 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder):
     for niifile in bidswork.rglob('sub-*.nii*'):
         niifile.unlink()
     for subwork in bidswork.glob('sub-*'):
-        for seswork in subwork.glob('ses-*'):
-            sesfolder = bidsfolder/subwork.name/seswork.name
-            sesfolder.mkdir(parents=True, exist_ok=True)
-            copy_tree(str(seswork), str(sesfolder))
+        sessions = sorted(subwork.glob('ses-*'))
+        if sessions:
+            for seswork in sessions:
+                sesfolder = bidsfolder/subwork.name/seswork.name
+                sesfolder.mkdir(parents=True, exist_ok=True)
+                copy_tree(str(seswork), str(sesfolder))
+        else:
+            subfolder = bidsfolder/subwork.name
+            subfolder.mkdir(parents=True, exist_ok=True)
+            copy_tree(str(subwork), str(subfolder))
+
+    # Write BIDS metadata to the MRIQC group reports
+    mriqc_meta(mriqcfolder)
 
 
 parser = argparse.ArgumentParser()
