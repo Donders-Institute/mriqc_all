@@ -24,14 +24,14 @@ Options:
     bidsignore: mrs/;extra_data/    # Semicolon-separated list of entries that are added to the .bidsignore file (for more info, see BIDS specifications), e.g. extra_data/;pet/;myfile.txt;yourfile.csv
     subprefix: sub-                 # The subject prefix of the source data
     sesprefix: ses-                 # The session prefix of the source data
-    datatypes: [fmap, anat, func]   # A list of datatypes that are converted to BIDS (useful for skipping data)
+    datatypes: [fmap, anat, func, dwi]   # A list of datatypes that are converted to BIDS (useful for skipping data)
     unknowntypes: [extra_data]      # A list of datatypes that are converted to BIDS-like datatype folders
-    ignoretypes: [perf, dwi, pet, eeg, ieeg, mrs, exclude]          # A list of datatypes that are excluded / not converted to BIDS
+    ignoretypes: [perf, pet, eeg, ieeg, mrs, exclude]          # A list of datatypes that are excluded / not converted to BIDS
   plugins:                          # List of plugins with plugin-specific key-value pairs (that can be used by the plugin)
     dcm2niix2bids:                  # See dcm2niix -h and https://www.nitrc.org/plugins/mwiki/index.php/dcm2nii:MainPage#General_Usage for more info
       command: module add dcm2niix; dcm2niix # Command to run dcm2niix, e.g. "module add dcm2niix/1.0.20180622; dcm2niix" or "PATH=/opt/dcm2niix/bin:$PATH; dcm2niix" or /opt/dcm2niix/bin/dcm2niix or '"C:\Program Files\dcm2niix\dcm2niix.exe"' (use quotes to deal with whitespaces in the path)
       args: -b y -z n -i n          # Argument string that is passed to dcm2niix. Tip: SPM users may want to use '-z n' (which produces unzipped nifti's, see dcm2niix -h for more information)
-      anon: y                       # Set this anonymization flag to 'y' to round off age and discard acquisition date from the meta data
+      anon: n                       # Set this anonymization flag to 'y' to round off age and discard acquisition date from the meta data
       meta: [.json, .tsv, .tsv.gz]  # The file extensions of the equally named metadata sourcefiles that are copied over to the BIDS sidecar files
 
 
