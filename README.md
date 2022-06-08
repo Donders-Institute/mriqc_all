@@ -5,6 +5,7 @@ To execute mriqc_all run:
 
 ```commandline
 module load mriqc
+module load qsiprep
 cd /project/3015999.02/mriqc_all
 source activate ./env
 mriqc_all/mriqc_all.py -h

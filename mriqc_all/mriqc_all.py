@@ -70,7 +70,7 @@ def run_mriqc_all(date: str, outfolder: str, force: bool=False, dryrun: bool=Fal
             bidsfolder  = outfolder/'sourcedata'/rawfolder.name
             print(f"Submitting: {rawfolder} -> {mriqcfolder}")
             if not dryrun:
-                qsub    = f"qsub -l walltime=8:00:00,mem=18gb,file=50gb -N mriqc_job_{rawfolder} -e {logfile.parent} -o {logfile.parent}"
+                qsub    = f"qsub -l walltime=48:00:00,mem=20gb,file=50gb -N mriqc_job_{rawfolder} -e {logfile.parent} -o {logfile.parent}"
                 job     = f"{Path(__file__).parent}/mriqc_job.py {rawfolder} {bidsfolder} {bidsmapfile} {mriqcfolder}"
                 command = f"{qsub} <<EOF\n{job}\nEOF"
                 process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
