@@ -50,15 +50,15 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder):
             copy_tree(str(subwork), str(subfolder))
 
     # Copy the remaining derived (qsiprep) meta data
-    for subwork in (bidswork/'derivatives/qsiprep').glob('sub-*'):
+    for subwork in (bidswork/'derivatives'/'qsiprep').glob('sub-*'):
         sessions = sorted(subwork.glob('ses-*'))
         if sessions:
             for seswork in sessions:
-                sesfolder = bidsfolder/'derivatives/qsiprep'/subwork.name/seswork.name
+                sesfolder = bidsfolder/'derivatives'/'qsiprep'/subwork.name/seswork.name
                 sesfolder.mkdir(parents=True, exist_ok=True)
                 copy_tree(str(seswork), str(sesfolder))
         else:
-            subfolder = bidsfolder/'derivatives/qsiprep'/subwork.name
+            subfolder = bidsfolder/'derivatives'/'qsiprep'/subwork.name
             subfolder.mkdir(parents=True, exist_ok=True)
             copy_tree(str(subwork), str(subfolder))
 

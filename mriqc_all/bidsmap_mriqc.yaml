@@ -416,7 +416,7 @@ DICOM:
   - provenance:                         # First match the SBREF bold runs (the normal bold runs don't have SBREF in the seriesdescription)
     attributes:
       <<: *func_dicomattr
-      SeriesDescription: (?i).*((f|functional).?MRI|task|BOLD|Rest|CMRR.*_TR).*SBREF.*
+      SeriesDescription: (?i).*((f|functional).?MRI|task|BOLD|Rest|RSN|CMRR.*_TR).*SBREF.*
     bids:
       <<: *func_dicoment_func
       suffix: sbref
@@ -446,7 +446,7 @@ DICOM:
   - provenance:                         # Then catch the bold runs themselves
     attributes:
       <<: *func_dicomattr
-      ProtocolName: (?i).*((f|functional).?MRI|task|BOLD|Rest|CMRR.*_TR).*
+      ProtocolName: (?i).*((f|functional).?MRI|task|BOLD|Rest|RSN|CMRR.*_TR).*
     bids: *func_dicoment_func
     meta: *func_meta
   - provenance:
