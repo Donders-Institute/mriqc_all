@@ -15,7 +15,7 @@ from pathlib import Path
 from distutils.dir_util import copy_tree
 
 
-def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder):
+def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
 
     # Convert the rawfolder to a BIDS workfolder
     bidsfolder = Path(bidsfolder)
@@ -30,7 +30,8 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder):
         print(f"ERROR {process.returncode}: MRIQC group report failed\n{process.stderr.decode('utf-8')}\n{process.stdout.decode('utf-8')}")
 
     # Run QSIPREP and copy the QC parameters into the MRIQC group report
-    qsiprep_run(bidswork, mriqcfolder, '', resolution='automatic', args='--dwi-only', nthreads=1, nosub=True, skip=False)
+    if qsiprep:
+        qsiprep_run(bidswork, mriqcfolder, '', resolution='automatic', args='--dwi-only', nthreads=1, nosub=True, skip=False)
 
     # Remove all nifti files
     for niifile in bidswork.rglob('sub-*.nii*'):

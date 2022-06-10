@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 
 
-def run_mriqc_all(date: str, outfolder: str, force: bool=False, dryrun: bool=False):
+def run_mriqc_all(date: str, outfolder: str, qsiprep: bool=False, force: bool=False, dryrun: bool=False):
     """Processes selected folders in the catch-all collection"""
 
     catchallraw = Path('/project/3055010.01/raw')
@@ -70,8 +70,8 @@ def run_mriqc_all(date: str, outfolder: str, force: bool=False, dryrun: bool=Fal
             bidsfolder  = outfolder/'sourcedata'/rawfolder.name
             print(f"Submitting: {rawfolder} -> {mriqcfolder}")
             if not dryrun:
-                qsub    = f"qsub -l walltime=48:00:00,mem=20gb,file=50gb -N mriqc_job_{rawfolder} -e {logfile.parent} -o {logfile.parent}"
-                job     = f"{Path(__file__).parent}/mriqc_job.py {rawfolder} {bidsfolder} {bidsmapfile} {mriqcfolder}"
+                qsub    = f"qsub -l walltime=48:00:00,mem=20gb,file=50gb -N mriqc_job_{rawfolder.parent.name}/{rawfolder.name} -e {logfile.parent} -o {logfile.parent}"
+                job     = f"{Path(__file__).parent}/mriqc_job.py {rawfolder} {bidsfolder} {bidsmapfile} {mriqcfolder} {qsiprep}"
                 command = f"{qsub} <<EOF\n{job}\nEOF"
                 process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
                 if process.stderr.decode('utf-8') or process.returncode != 0:
@@ -98,12 +98,13 @@ def main():
                                             "  run_mriqc_all -o test/mriqc_data\n ")
     parser.add_argument('-d','--date',      help='The date of the catch_all/raw/year/[date]/ folders that needs to be run', default='yesterday')
     parser.add_argument('-o','--outfolder', help='The mriqc output folder', default='/project/3015999.02/mriqc_data')
+    parser.add_argument('-q','--qsiprep',   help='If this flag is given data will be processed using qsiprep', action='store_true')
     parser.add_argument('-f','--force',     help='If this flag is given data will be processed, regardless of existing logfiles in the log-folder', action='store_true')
     parser.add_argument('--dryrun',         help='Add this flag to just print the new directories without actually running or submitting anything (useful for debugging)', action='store_true')
 
     args = parser.parse_args()
 
-    run_mriqc_all(date=args.date, outfolder=args.outfolder, force=args.force, dryrun=args.dryrun)
+    run_mriqc_all(date=args.date, outfolder=args.outfolder, qsiprep=args.qsiprep, force=args.force, dryrun=args.dryrun)
 
 
 if __name__ == '__main__':
