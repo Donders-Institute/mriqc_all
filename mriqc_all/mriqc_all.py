@@ -98,7 +98,7 @@ def main():
                                             "  run_mriqc_all -o test/mriqc_data\n ")
     parser.add_argument('-d','--date',      help='The date of the catch_all/raw/year/[date]/ folders that needs to be run', default='yesterday')
     parser.add_argument('-o','--outfolder', help='The mriqc output folder', default='/project/3015999.02/mriqc_data')
-    parser.add_argument('-q','--qsiprep',   help='If this flag is given data will be processed using qsiprep', action='store_true')
+    parser.add_argument('-q','--qsiprep',   help='If this flag is given data will also be processed using qsiprep', action='store_true')
     parser.add_argument('-f','--force',     help='If this flag is given data will be processed, regardless of existing logfiles in the log-folder', action='store_true')
     parser.add_argument('--dryrun',         help='Add this flag to just print the new directories without actually running or submitting anything (useful for debugging)', action='store_true')
 

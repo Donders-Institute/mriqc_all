@@ -5,6 +5,7 @@ import argparse
 import tempfile
 import subprocess
 import os
+import shutil
 import sys
 sys.path += ['/opt/qsiprep/dccn', '/opt/mriqc/dccn']
 from qsiprep_sub import main as qsiprep_run
@@ -12,7 +13,6 @@ from mriqc_sub import main as mriqc_run
 from mriqc_meta import mriqc_meta as mriqc_meta
 from bidscoin import bidscoiner
 from pathlib import Path
-from distutils.dir_util import copy_tree
 
 
 def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
@@ -21,6 +21,9 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
     bidsfolder = Path(bidsfolder)
     bidswork   = Path(tempfile.gettempdir())/bidsfolder.name
     bidscoiner.bidscoiner(rawfolder, bidswork, bidsmapfile=bidsmapfile)
+    if not list(bidswork.glob('sub-*')):
+        print(f"No subject data found in: {bidswork}")
+        return
 
     # Run MRIQC participant + group
     mriqc_run(bidswork, mriqcfolder, '', nosub=True, skip=False)
@@ -29,8 +32,8 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
     if process.stderr.decode('utf-8') or process.returncode != 0:
         print(f"ERROR {process.returncode}: MRIQC group report failed\n{process.stderr.decode('utf-8')}\n{process.stdout.decode('utf-8')}")
 
-    # Run QSIPREP and copy the QC parameters into the MRIQC group report
-    if qsiprep:
+    # Run QSIPREP (WIP: copy the QC parameters into the MRIQC group report)
+    if qsiprep == 'True':
         qsiprep_run(bidswork, mriqcfolder, '', resolution='automatic', args='--dwi-only', nthreads=1, nosub=True, skip=False)
 
     # Remove all nifti files
@@ -38,30 +41,30 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
         niifile.unlink()
 
     # Copy the remaining BIDS meta data
+    bidsfolder.mkdir(parents=True, exist_ok=True)
+    shutil.copy(bidswork/'participants.tsv', bidsfolder/'participants.tsv')
     for subwork in bidswork.glob('sub-*'):
-        sessions = sorted(subwork.glob('ses-*'))
-        if sessions:
+        subfolder = bidsfolder/subwork.name
+        sessions  = sorted(subwork.glob('ses-*'))
+        if sessions:                    # Account for potential previous session in the sub-folder
+            subfolder.mkdir(parents=True)
             for seswork in sessions:
-                sesfolder = bidsfolder/subwork.name/seswork.name
-                sesfolder.mkdir(parents=True, exist_ok=True)
-                copy_tree(str(seswork), str(sesfolder))
+                sesfolder = subfolder/seswork.name
+                shutil.copytree(seswork, sesfolder)
         else:
-            subfolder = bidsfolder/subwork.name
-            subfolder.mkdir(parents=True, exist_ok=True)
-            copy_tree(str(subwork), str(subfolder))
+            shutil.copytree(subwork, subfolder)
 
     # Copy the remaining derived (qsiprep) meta data
     for subwork in (bidswork/'derivatives'/'qsiprep').glob('sub-*'):
-        sessions = sorted(subwork.glob('ses-*'))
-        if sessions:
+        subfolder = bidsfolder/'derivatives'/'qsiprep'/subwork.name
+        sessions  = sorted(subwork.glob('ses-*'))
+        if sessions:                    # Account for potential previous session in the sub-folder
+            subfolder.mkdir(parents=True)
             for seswork in sessions:
-                sesfolder = bidsfolder/'derivatives'/'qsiprep'/subwork.name/seswork.name
-                sesfolder.mkdir(parents=True, exist_ok=True)
-                copy_tree(str(seswork), str(sesfolder))
+                sesfolder = subfolder/seswork.name
+                shutil.copytree(seswork, sesfolder)
         else:
-            subfolder = bidsfolder/'derivatives'/'qsiprep'/subwork.name
-            subfolder.mkdir(parents=True, exist_ok=True)
-            copy_tree(str(subwork), str(subfolder))
+            shutil.copytree(subwork, subfolder)
 
     # Write BIDS metadata to the MRIQC group reports
     mriqc_meta(mriqcfolder)
@@ -75,9 +78,11 @@ if __name__ == "__main__":
     parser.add_argument('bidsfolder')
     parser.add_argument('bidsmapfile')
     parser.add_argument('mriqcfolder')
+    parser.add_argument('qsiprep')
     args = parser.parse_args()
 
     main(rawfolder   = args.rawfolder,
          bidsfolder  = args.bidsfolder,
          bidsmapfile = args.bidsmapfile,
-         mriqcfolder = args.mriqcfolder)
+         mriqcfolder = args.mriqcfolder,
+         qsiprep     = args.qsiprep)

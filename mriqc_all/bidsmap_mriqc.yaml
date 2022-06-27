@@ -24,9 +24,9 @@ Options:
     bidsignore: mrs/;extra_data/    # Semicolon-separated list of entries that are added to the .bidsignore file (for more info, see BIDS specifications), e.g. extra_data/;pet/;myfile.txt;yourfile.csv
     subprefix: sub-                 # The subject prefix of the source data
     sesprefix: ses-                 # The session prefix of the source data
-    datatypes: [fmap, anat, func, dwi]   # A list of datatypes that are converted to BIDS (useful for skipping data)
-    unknowntypes: [extra_data]      # A list of datatypes that are converted to BIDS-like datatype folders
-    ignoretypes: [perf, pet, eeg, ieeg, mrs, exclude]          # A list of datatypes that are excluded / not converted to BIDS
+    datatypes: [fmap, anat, func, perf, dwi, pet, eeg, ieeg]  # A list of datatypes that are converted to BIDS (useful for skipping data)
+    unknowntypes: [mrs, extra_data] # A list of datatypes that are converted to BIDS-like datatype folders
+    ignoretypes: [exclude]          # A list of datatypes that are excluded / not converted to BIDS
   plugins:                          # List of plugins with plugin-specific key-value pairs (that can be used by the plugin)
     dcm2niix2bids:                  # See dcm2niix -h and https://www.nitrc.org/plugins/mwiki/index.php/dcm2nii:MainPage#General_Usage for more info
       command: module add dcm2niix; dcm2niix # Command to run dcm2niix, e.g. "module add dcm2niix/1.0.20180622; dcm2niix" or "PATH=/opt/dcm2niix/bin:$PATH; dcm2niix" or /opt/dcm2niix/bin/dcm2niix or '"C:\Program Files\dcm2niix\dcm2niix.exe"' (use quotes to deal with whitespaces in the path)
@@ -45,7 +45,7 @@ DICOM:
   anat:       # ----------------------- All anatomical runs --------------------
   - provenance:                   # The fullpath name of the DICOM file from which the attributes are read. Serves also as a look-up key to find a run in the bidsmap
     properties: &fileprop         # This is an optional (stub) entry of properties matching (could be added to any run-item)
-      filepath:                   # File folder, e.g. ".*Parkinson.*" or ".*(phantom|bottle).*"
+      filepath:                   # File folder, e.g. ".*/Parkinson/.*" or ".*(phantom|bottle).*"
       filename:                   # File name, e.g. ".*fmap.*" or ".*(fmap|field.?map|B0.?map).*"
       filesize:                   # File size, e.g. "2[4-6]\d MB" for matching files between 240-269 MB
       nrfiles:                    # Number of files in the folder
@@ -416,7 +416,7 @@ DICOM:
   - provenance:                         # First match the SBREF bold runs (the normal bold runs don't have SBREF in the seriesdescription)
     attributes:
       <<: *func_dicomattr
-      SeriesDescription: (?i).*((f|functional).?MRI|task|BOLD|Rest|RSN|CMRR.*_TR).*SBREF.*
+      SeriesDescription: (?i).*(f.?MRI|task|BOLD|func|rest|RSN|CMRR.*_TR).*SBREF.*
     bids:
       <<: *func_dicoment_func
       suffix: sbref
@@ -424,7 +424,7 @@ DICOM:
   - provenance:                         # Then match the PHYSIO runs (the normal bold runs don't have PHYSIO in the seriesdescription)
     attributes:
       <<: *func_dicomattr
-      ProtocolName: (?i).*((f|functional).?MRI|task|BOLD|CMRR.*_TR).*
+      ProtocolName: (?i).*(f.?MRI|task|BOLD|func|rest|RSN|CMRR.*_TR).*
       ImageType: .*'PHYSIO'.*
     bids: &func_dicoment_timeseries     # See: schema/datatypes/func.yaml
       task: <ProtocolName>
@@ -440,13 +440,13 @@ DICOM:
   - provenance:
     attributes:
       <<: *func_dicomattr
-      SeriesDescription: (?i).*((f|functional).?MRI|task|BOLD|CMRR.*_TR).*PHYSIO.*
+      SeriesDescription: (?i).*(f.?MRI|task|BOLD|func|rest|RSN|CMRR.*_TR).*PHYSIO.*
     bids: *func_dicoment_timeseries
     meta: *func_meta
   - provenance:                         # Then catch the bold runs themselves
     attributes:
       <<: *func_dicomattr
-      ProtocolName: (?i).*((f|functional).?MRI|task|BOLD|Rest|RSN|CMRR.*_TR).*
+      ProtocolName: (?i).*(f.?MRI|task|BOLD|func|rest|RSN|CMRR.*_TR).*
     bids: *func_dicoment_func
     meta: *func_meta
   - provenance:
@@ -581,7 +581,7 @@ DICOM:
   - provenance:                         # First match the SBREF dwi runs (the normal dwi runs don't have SBREF in the seriesdescription)
     attributes:
       <<: *dwi_dicomattr
-      SeriesDescription: (?i).*(DWI|diffusion|DTI).*SBREF.*
+      SeriesDescription: (?i).*(DWI|diffusion|HARDI|DTI).*SBREF.*
     bids: &dwi_dicoment_sbref           # See: schema/datatypes/dwi.yaml
       acq: <SeriesDescription>
       dir:
@@ -592,7 +592,7 @@ DICOM:
   - provenance:                         # Then match the PHYSIO runs (the normal bold runs don't have PHYSIO in the seriesdescription)
     attributes:
       <<: *dwi_dicomattr
-      ProtocolName: (?i).*(DWI|diffusion|DTI).*
+      ProtocolName: (?i).*(DWI|diffusion|HARDI|DTI).*
       ImageType: .*'PHYSIO'.*
     bids: &dwi_dicoment_physio          # See: schema/datatypes/dwi.yaml
       acq: <SeriesDescription>
@@ -604,12 +604,12 @@ DICOM:
   - provenance:
     attributes:
       <<: *dwi_dicomattr
-      SeriesDescription: (?i).*(DWI|diffusion|DTI).*PHYSIO.*
+      SeriesDescription: (?i).*(DWI|diffusion|HARDI|DTI).*PHYSIO.*
     bids: *dwi_dicoment_physio
   - provenance:                         # Then catch the normal DWI runs
     attributes:
       <<: *dwi_dicomattr
-      ProtocolName: (?i).*(DWI|diffusion|DTI).*
+      ProtocolName: (?i).*(DWI|diffusion|HARDI|DTI).*
     bids: *dwi_dicoment_DWI
     meta: *dwi_meta
   - provenance:

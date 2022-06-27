@@ -29,6 +29,11 @@ def copymetadata(attributes: list, report_tsv: Path, modality: str, dryrun: bool
         if 'ses-' not in ses:
             ses = ''
 
+        # Copy sex and age from the particpants.tsv file to the group report
+        scansdata = pd.read_csv(bidsfolder/'participants.tsv', sep='\t', index_col='participant_id')
+        report.loc[bidsname, 'meta.Sex'] = scansdata.loc[sub, 'sex']
+        report.loc[bidsname, 'meta.Age'] = scansdata.loc[sub, 'age']
+
         # Copy the acquisition time from the scans.tsv file to the group report
         scansfile = bidsfolder/sub/ses/f"{sub}{'_' if ses else ''}{ses}_scans.tsv"
         scansdata = pd.read_csv(scansfile, sep='\t', index_col='filename')
