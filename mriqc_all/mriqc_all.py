@@ -54,11 +54,12 @@ def run_mriqc_all(date: str, outfolder: str, qsiprep: bool=False, force: bool=Fa
         for rawfolder in datefolder.iterdir():
 
             # Wait until there are less than maxrunning jobs
-            running = subprocess.run('if [ ! -z "$(qselect -s RQH)" ]; then qstat -f $(qselect -s RQH) | grep Job_Name | grep mriqc_sub- | wc -l; fi', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-            if running.stdout.decode():
-                while int(running.stdout.decode()) > maxrunning:
-                    print(f"Pausing 10 minutes because there are more than {maxrunning} job running already...")
-                    time.sleep(10*60)
+            if not dryrun:
+                running = subprocess.run('if [ ! -z "$(qselect -s RQH)" ]; then qstat -f $(qselect -s RQH) | grep Job_Name | grep mriqc_job_ | wc -l; fi', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+                if running.stdout.decode():
+                    while int(running.stdout.decode()) > maxrunning:
+                       print(f"Pausing 10 minutes because you have more than {maxrunning} mriqc_job_* jobs queued or running already...")
+                       time.sleep(10*60)
 
             # TODO: Unpack old zipped session data to a temporary rawfolder?
             if rawfolder.is_file():
@@ -70,7 +71,7 @@ def run_mriqc_all(date: str, outfolder: str, qsiprep: bool=False, force: bool=Fa
             bidsfolder  = outfolder/'sourcedata'/rawfolder.name
             print(f"Submitting: {rawfolder} -> {mriqcfolder}")
             if not dryrun:
-                qsub    = f"qsub -l walltime=48:00:00,mem=20gb,file=50gb -N mriqc_job_{rawfolder.parent.name}/{rawfolder.name} -e {logfile.parent} -o {logfile.parent}"
+                qsub    = f"qsub -l walltime=12:00:00,mem=20gb,file=50gb -N mriqc_job_{rawfolder.parent.name}/{rawfolder.name} -e {logfile.parent} -o {logfile.parent}"
                 job     = f"{Path(__file__).parent}/mriqc_job.py {rawfolder} {bidsfolder} {bidsmapfile} {mriqcfolder} {qsiprep}"
                 command = f"{qsub} <<EOF\n{job}\nEOF"
                 process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
