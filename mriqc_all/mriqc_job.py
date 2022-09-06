@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""bidscoiner / mriqc_sub wrapper function for mriqc_all"""
+"""bidscoiner / mriqc_sub helper function to run a mriqc_all job locally"""
 
+import pandas as pd
 import argparse
 import tempfile
 import subprocess
@@ -42,7 +43,6 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
 
     # Copy the remaining BIDS meta data
     bidsfolder.mkdir(parents=True, exist_ok=True)
-    shutil.copy(bidswork/'participants.tsv', bidsfolder/'participants.tsv')
     for subwork in bidswork.glob('sub-*'):
         subfolder = bidsfolder/subwork.name
         sessions  = sorted(subwork.glob('ses-*'))
@@ -66,7 +66,15 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
         else:
             shutil.copytree(subwork, subfolder)
 
-    # Write BIDS metadata to the MRIQC group reports
+    # Copy/update the participants.tsv file to the BIDS sourcefolder and write BIDS metadata to the MRIQC group reports
+    participantsfile = bidsfolder/'participants.tsv'
+    if participantsfile.is_file():
+        olddata = pd.read_csv(participantsfile, sep='\t', index_col='participant_id')
+        newdata = pd.read_csv(bidswork/'participants.tsv', sep='\t', index_col='participant_id')
+        alldata = pd.concat([olddata, newdata])
+        alldata.to_csv(participantsfile, sep='\t')
+    else:
+        shutil.copy(bidswork/'participants.tsv', participantsfile)
     mriqc_meta(mriqcfolder)
 
 

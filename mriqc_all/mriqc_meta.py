@@ -18,6 +18,7 @@ def copymetadata(attributes: list, report_tsv: Path, modality: str, dryrun: bool
         report = pd.read_csv(report_tsv, sep='\t')
         report.set_index(['bids_name'], verify_integrity=True, inplace=True)
     else:
+        print(f"WARNING: {report_tsv} could not be found")
         return
 
     # Loop over the sessions in the MRIQC report
@@ -30,12 +31,14 @@ def copymetadata(attributes: list, report_tsv: Path, modality: str, dryrun: bool
             ses = ''
 
         # Copy sex and age from the particpants.tsv file to the group report
-        scansdata = pd.read_csv(bidsfolder/'participants.tsv', sep='\t', index_col='participant_id')
-        report.loc[bidsname, 'meta.Sex'] = scansdata.loc[sub, 'sex']
-        report.loc[bidsname, 'meta.Age'] = scansdata.loc[sub, 'age']
+        print(f"Adding data from: {bidsfolder/'participants.tsv'}")
+        subdata = pd.read_csv(bidsfolder/'participants.tsv', sep='\t', index_col='participant_id')
+        report.loc[bidsname, 'meta.Sex'] = subdata.loc[sub, 'sex']
+        report.loc[bidsname, 'meta.Age'] = subdata.loc[sub, 'age']
 
         # Copy the acquisition time from the scans.tsv file to the group report
         scansfile = bidsfolder/sub/ses/f"{sub}{'_' if ses else ''}{ses}_scans.tsv"
+        print(f"Adding data from: {scansfile}")
         scansdata = pd.read_csv(scansfile, sep='\t', index_col='filename')
         scanpath  = f"{modality}/{bidsname}.nii"
         report.loc[bidsname, 'meta.AcquisitionTime'] = scansdata.loc[scanpath, 'acq_time']
@@ -66,6 +69,7 @@ def mriqc_meta(project, meta: tuple=('MagneticFieldStrength', 'ManufacturersMode
     for project in projects:
 
         # Read / write the MRIQC group reports
+        print(f"Adding metadata for: {project}")
         if project.is_dir():
             copymetadata(meta, project/'group_T1w.tsv', 'anat', dryrun)
             copymetadata(meta, project/'group_bold.tsv', 'func', dryrun)

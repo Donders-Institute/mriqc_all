@@ -15,7 +15,7 @@ def run_mriqc_all(date: str, outfolder: str, qsiprep: bool=False, force: bool=Fa
     catchallraw = Path('/project/3055010.01/raw')
     bidsmapfile = Path(__file__).parent/'bidsmap_mriqc.yaml'
     outfolder   = Path(outfolder)
-    maxrunning  = 350               # MOAB: MAXJOB = 400
+    maxrunning  = 250               # MOAB: MAXJOB = 400
 
     # Parse the datefolders
     if date == 'all' or '*' in date:
@@ -42,7 +42,7 @@ def run_mriqc_all(date: str, outfolder: str, qsiprep: bool=False, force: bool=Fa
             return
 
     # Loop over the raw data-folders inside the datefolders
-    for datefolder in sorted(datefolders, reverse=True):
+    for n, datefolder in enumerate(sorted(datefolders, reverse=True), 1):
 
         # Check the logs if we have processed this before
         logfile = outfolder/'logs'/datefolder.name
@@ -55,11 +55,12 @@ def run_mriqc_all(date: str, outfolder: str, qsiprep: bool=False, force: bool=Fa
 
             # Wait until there are less than maxrunning jobs
             if not dryrun:
-                running = subprocess.run('if [ ! -z "$(qselect -s RQH)" ]; then qstat -f $(qselect -s RQH) | grep Job_Name | grep mriqc_job_ | wc -l; fi', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-                if running.stdout.decode():
-                    while int(running.stdout.decode()) > maxrunning:
-                       print(f"Pausing 10 minutes because you have more than {maxrunning} mriqc_job_* jobs queued or running already...")
-                       time.sleep(10*60)
+                countjobs   = 'if [ ! -z "$(qselect -s RQH)" ]; then qstat -f $(qselect -s RQH) | grep Job_Name | grep mriqc_job_ | wc -l; else echo 0; fi'
+                runningjobs = subprocess.run(countjobs, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).stdout.decode()
+                while int(runningjobs) >= maxrunning:
+                    print(f"[{time.strftime('%H:%M:%S')}] Pausing 30 minutes because you already have {runningjobs} mriqc_job_* jobs queued or running...")
+                    time.sleep(30*60)
+                    runningjobs = subprocess.run(countjobs, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).stdout.decode()
 
             # TODO: Unpack old zipped session data to a temporary rawfolder?
             if rawfolder.is_file():
@@ -69,14 +70,14 @@ def run_mriqc_all(date: str, outfolder: str, qsiprep: bool=False, force: bool=Fa
             # Process the raw data-folder
             mriqcfolder = outfolder/rawfolder.name
             bidsfolder  = outfolder/'sourcedata'/rawfolder.name
-            print(f"Submitting: {rawfolder} -> {mriqcfolder}")
+            print(f"[{time.strftime('%H:%M:%S')}] Submitting ({n}/{len(datefolders)}): {rawfolder} -> {mriqcfolder}")
             if not dryrun:
-                qsub    = f"qsub -l walltime=12:00:00,mem=20gb,file=50gb -N mriqc_job_{rawfolder.parent.name}/{rawfolder.name} -e {logfile.parent} -o {logfile.parent}"
+                qsub    = f"qsub -l walltime=18:00:00,mem=30gb,file=50gb -N mriqc_job_{rawfolder.parent.name}/{rawfolder.name} -e {logfile.parent} -o {logfile.parent}"
                 job     = f"{Path(__file__).parent}/mriqc_job.py {rawfolder} {bidsfolder} {bidsmapfile} {mriqcfolder} {qsiprep}"
                 command = f"{qsub} <<EOF\n{job}\nEOF"
                 process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
                 if process.stderr.decode('utf-8') or process.returncode != 0:
-                    print(f"ERROR {process.returncode}: MRIQC job submission failed\n{process.stderr.decode('utf-8')}\n{process.stdout.decode('utf-8')}")
+                    print(f"ERROR {process.returncode}: MRIQC job failed\n{process.stderr.decode('utf-8')}\n{process.stdout.decode('utf-8')}")
 
         # Write a datefolder log entry with the current datetime
         if not dryrun:
