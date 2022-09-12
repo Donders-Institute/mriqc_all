@@ -18,9 +18,20 @@ from pathlib import Path
 
 def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
 
-    # Convert the rawfolder to a BIDS workfolder
+    rawfolder  = Path(rawfolder)
     bidsfolder = Path(bidsfolder)
-    bidswork   = Path(tempfile.gettempdir())/bidsfolder.name
+
+    # Make a temporary shadow sub-/ses- directory structure for unstructered (unscheduled) data
+    if '^' in rawfolder.name:
+        sub, ses  = rawfolder.name.split('_', 2)
+        rawshadow = Path(tempfile.gettempdir())/'sourcedata'/rawfolder.name
+        subfolder = rawshadow/f"sub-{sub}"
+        subfolder.mkdir(parents=True)
+        (subfolder/f"ses-{ses}").symlink_to(rawfolder)
+        rawfolder = rawshadow
+
+    # Convert the rawfolder to a BIDS workfolder
+    bidswork = Path(tempfile.gettempdir())/bidsfolder.name
     bidscoiner.bidscoiner(rawfolder, bidswork, bidsmapfile=bidsmapfile)
     if not list(bidswork.glob('sub-*')):
         print(f"No subject data found in: {bidswork}")
@@ -46,7 +57,7 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
     for subwork in bidswork.glob('sub-*'):
         subfolder = bidsfolder/subwork.name
         sessions  = sorted(subwork.glob('ses-*'))
-        subfolder.mkdir(parents=True)
+        subfolder.mkdir(parents=True, exist_ok=True)
         for seswork in sessions:        # Account for potential previous session in the sub-folder
             sesfolder = subfolder/seswork.name
             shutil.copytree(seswork, sesfolder)
@@ -55,8 +66,8 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
     for subwork in (bidswork/'derivatives'/'qsiprep').glob('sub-*'):
         subfolder = bidsfolder/'derivatives'/'qsiprep'/subwork.name
         sessions  = sorted(subwork.glob('ses-*'))
-        subfolder.mkdir(parents=True)   # Account for potential previous session in the sub-folder
-        for seswork in sessions:
+        subfolder.mkdir(parents=True, exist_ok=True)
+        for seswork in sessions:        # Account for potential previous session in the sub-folder
             sesfolder = subfolder/seswork.name
             shutil.copytree(seswork, sesfolder)
 
