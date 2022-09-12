@@ -27,8 +27,6 @@ def copymetadata(attributes: list, report_tsv: Path, modality: str, dryrun: bool
         # Parse the project folder and the (full) subject and session labels
         bidsfolder = sourcedata/report_tsv.parent.name    # e.g. [..]/3015999.02
         sub, ses   = bidsname.split('_')[0:2]             # e.g. sub = 'sub-001'
-        if 'ses-' not in ses:
-            ses = ''
 
         # Copy sex and age from the particpants.tsv file to the group report
         print(f"Adding data from: {bidsfolder/'participants.tsv'}")

@@ -46,25 +46,19 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
     for subwork in bidswork.glob('sub-*'):
         subfolder = bidsfolder/subwork.name
         sessions  = sorted(subwork.glob('ses-*'))
-        if sessions:                    # Account for potential previous session in the sub-folder
-            subfolder.mkdir(parents=True)
-            for seswork in sessions:
-                sesfolder = subfolder/seswork.name
-                shutil.copytree(seswork, sesfolder)
-        else:
-            shutil.copytree(subwork, subfolder)
+        subfolder.mkdir(parents=True)
+        for seswork in sessions:        # Account for potential previous session in the sub-folder
+            sesfolder = subfolder/seswork.name
+            shutil.copytree(seswork, sesfolder)
 
     # Copy the remaining derived (qsiprep) meta data
     for subwork in (bidswork/'derivatives'/'qsiprep').glob('sub-*'):
         subfolder = bidsfolder/'derivatives'/'qsiprep'/subwork.name
         sessions  = sorted(subwork.glob('ses-*'))
-        if sessions:                    # Account for potential previous session in the sub-folder
-            subfolder.mkdir(parents=True)
-            for seswork in sessions:
-                sesfolder = subfolder/seswork.name
-                shutil.copytree(seswork, sesfolder)
-        else:
-            shutil.copytree(subwork, subfolder)
+        subfolder.mkdir(parents=True)   # Account for potential previous session in the sub-folder
+        for seswork in sessions:
+            sesfolder = subfolder/seswork.name
+            shutil.copytree(seswork, sesfolder)
 
     # Copy/update the participants.tsv file to the BIDS sourcefolder and write BIDS metadata to the MRIQC group reports
     participantsfile = bidsfolder/'participants.tsv'

@@ -58,7 +58,7 @@ def run_mriqc_all(date: str, outfolder: str, qsiprep: bool=False, force: bool=Fa
                 countjobs   = 'if [ ! -z "$(qselect -s RQH)" ]; then qstat -f $(qselect -s RQH) | grep Job_Name | grep mriqc_job_ | wc -l; else echo 0; fi'
                 runningjobs = subprocess.run(countjobs, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).stdout.decode()
                 while int(runningjobs) >= maxrunning:
-                    print(f"[{time.strftime('%H:%M:%S')}] Pausing 30 minutes because you already have {runningjobs} mriqc_job_* jobs queued or running...")
+                    print(f"[{time.strftime('%H:%M:%S')}] Pausing 30 minutes because you already have {runningjobs.strip()} mriqc_job_* jobs queued or running...")
                     time.sleep(30*60)
                     runningjobs = subprocess.run(countjobs, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True).stdout.decode()
 
