@@ -1,3 +1,4 @@
 bidscoin
 python-dateutil
 parsedatetime
+pandas

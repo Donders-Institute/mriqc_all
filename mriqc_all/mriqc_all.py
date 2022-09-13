@@ -74,7 +74,7 @@ def run_mriqc_all(date: str, outfolder: str, qsiprep: bool=False, force: bool=Fa
             if not dryrun:
                 qsub    = f"qsub -l walltime=18:00:00,mem=30gb,file=50gb -N mriqc_job_{rawfolder.parent.name}/{rawfolder.name} -e {logfile.parent} -o {logfile.parent}"
                 job     = f"{Path(__file__).parent}/mriqc_job.py {rawfolder} {bidsfolder} {bidsmapfile} {mriqcfolder} {qsiprep}"
-                command = f"{qsub} <<EOF\n{job}\nEOF"
+                command = f"{qsub} <<EOF\nmodule load mriqc; source activate /project/3015999.02/mriqc_all/env; {job}\nEOF"
                 process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
                 if process.stderr.decode('utf-8') or process.returncode != 0:
                     print(f"ERROR {process.returncode}: MRIQC job failed\n{process.stderr.decode('utf-8')}\n{process.stdout.decode('utf-8')}")
