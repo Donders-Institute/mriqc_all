@@ -23,7 +23,8 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
 
     # Make a temporary shadow sub-/ses- directory structure for unstructered (unscheduled) data
     if '^' in rawfolder.name:
-        sub, ses  = rawfolder.name.split('_', 2)
+        sub = rawfolder.name                    # e.g. JurCla^Prisma_090135.023000
+        ses = rawfolder.name.split('_', 2)[1]   # e.g. 090135.023000
         rawshadow = Path(tempfile.mkdtemp())/'sourcedata'/rawfolder.name
         subfolder = rawshadow/f"sub-{sub}"
         subfolder.mkdir(parents=True)
