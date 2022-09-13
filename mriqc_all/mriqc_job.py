@@ -24,14 +24,14 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
     # Make a temporary shadow sub-/ses- directory structure for unstructered (unscheduled) data
     if '^' in rawfolder.name:
         sub, ses  = rawfolder.name.split('_', 2)
-        rawshadow = Path(tempfile.gettempdir())/'sourcedata'/rawfolder.name
+        rawshadow = Path(tempfile.mkdtemp())/'sourcedata'/rawfolder.name
         subfolder = rawshadow/f"sub-{sub}"
         subfolder.mkdir(parents=True)
         (subfolder/f"ses-{ses}").symlink_to(rawfolder)
         rawfolder = rawshadow
 
     # Convert the rawfolder to a BIDS workfolder
-    bidswork = Path(tempfile.gettempdir())/bidsfolder.name
+    bidswork = Path(tempfile.mkdtemp())/bidsfolder.name
     bidscoiner.bidscoiner(rawfolder, bidswork, bidsmapfile=bidsmapfile)
     if not list(bidswork.glob('sub-*')):
         print(f"No subject data found in: {bidswork}")
