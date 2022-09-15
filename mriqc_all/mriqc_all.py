@@ -45,9 +45,10 @@ def run_mriqc_all(date: str, outfolder: str, qsiprep: bool=False, force: bool=Fa
     for n, datefolder in enumerate(sorted(datefolders, reverse=True), 1):
 
         # Check the logs if we have processed this before
-        logfile = outfolder/'logs'/datefolder.name
-        logfile.parent.mkdir(parents=True, exist_ok=True)
-        if not force and logfile.is_file():
+        logfolder = outfolder/'logs'/datefolder.name
+        if not dryrun:
+            logfolder.mkdir(parents=True, exist_ok=True)
+        if not force and list(logfolder.glob('*.*')):
             print(f"Skipping processed folder: {datefolder}")
             continue
 
@@ -72,16 +73,14 @@ def run_mriqc_all(date: str, outfolder: str, qsiprep: bool=False, force: bool=Fa
             bidsfolder  = outfolder/'sourcedata'/rawfolder.name
             print(f"[{time.strftime('%H:%M:%S')}] Submitting ({n}/{len(datefolders)}): {rawfolder} -> {mriqcfolder}")
             if not dryrun:
-                qsub    = f"qsub -l walltime=18:00:00,mem=30gb,file=50gb -N mriqc_job_{rawfolder.parent.name}/{rawfolder.name} -e {logfile.parent} -o {logfile.parent}"
+                mriqcfolder.mkdir(parents=True, exist_ok=True)
+                bidsfolder.mkdir(parents=True, exist_ok=True)
+                qsub    = f"qsub -l walltime=18:00:00,mem=30gb,file=50gb -N mriqc_job_{rawfolder.parent.name}/{rawfolder.name} -e {logfolder/rawfolder.name}.e -o {logfolder/rawfolder.name}.o"
                 job     = f"{Path(__file__).parent}/mriqc_job.py {rawfolder} {bidsfolder} {bidsmapfile} {mriqcfolder} {qsiprep}"
                 command = f"{qsub} <<EOF\nmodule load mriqc; source activate /project/3015999.02/mriqc_all/env; {job}\nEOF"
                 process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-                if process.stderr.decode('utf-8') or process.returncode != 0:
-                    print(f"ERROR {process.returncode}: MRIQC job failed\n{process.stderr.decode('utf-8')}\n{process.stdout.decode('utf-8')}")
-
-        # Write a datefolder log entry with the current datetime
-        if not dryrun:
-            logfile.write_text(pdt.datetime.datetime.now().isoformat())
+                if process.stderr.decode() or process.returncode != 0:
+                    print(f"ERROR {process.returncode}: MRIQC job failed\n{process.stderr.decode()}\n{process.stdout.decode()}")
 
 
 def main():

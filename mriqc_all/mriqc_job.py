@@ -21,7 +21,7 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
     rawfolder  = Path(rawfolder)
     bidsfolder = Path(bidsfolder)
 
-    # Make a temporary shadow sub-/ses- directory structure for unstructered (unscheduled) data
+    # Make a temporary shadow raw directory structure (with dummy sub-/ses- folders) for unstructered (unscheduled) data
     if '^' in rawfolder.name:
         sub = rawfolder.name                    # e.g. JurCla^Prisma_090135.023000
         ses = rawfolder.name.split('_', 2)[1]   # e.g. 090135.023000
@@ -32,18 +32,31 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
         rawfolder = rawshadow
 
     # Convert the rawfolder to a BIDS workfolder
+    print(f">>> Processing {rawfolder}")
     bidswork = Path(tempfile.mkdtemp())/bidsfolder.name
     bidscoiner.bidscoiner(rawfolder, bidswork, bidsmapfile=bidsmapfile)
     if not list(bidswork.glob('sub-*')):
         print(f"No subject data found in: {bidswork}")
         return
 
+    # Copy/update the participants.tsv file in the BIDS sourcefolder
+    participantsfile = bidsfolder/'participants.tsv'
+    if participantsfile.is_file():
+        olddata = pd.read_csv(participantsfile, sep='\t', index_col='participant_id')
+        newdata = pd.read_csv(bidswork/'participants.tsv', sep='\t', index_col='participant_id')
+        for participant in newdata.index:
+            if participant not in olddata.index:
+                olddata.loc[participant] = newdata.loc[participant]
+        olddata.to_csv(participantsfile, sep='\t')
+    else:
+        shutil.copy(bidswork/'participants.tsv', participantsfile)
+
     # Run MRIQC participant + group
     mriqc_run(bidswork, mriqcfolder, '', nosub=True, skip=False)
     mriqc_group = f"singularity run --cleanenv {os.getenv('DCCN_OPT_DIR')}/mriqc/{os.getenv('MRIQC_VERSION')}/mriqc-{os.getenv('MRIQC_VERSION')}.simg {bidswork} {mriqcfolder} group --nprocs 1"
     process     = subprocess.run(mriqc_group, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    if process.stderr.decode('utf-8') or process.returncode != 0:
-        print(f"ERROR {process.returncode}: MRIQC group report failed\n{process.stderr.decode('utf-8')}\n{process.stdout.decode('utf-8')}")
+    if process.stderr.decode() or process.returncode != 0:
+        print(f"WARNING {process.returncode}: MRIQC group report failed\n{process.stderr.decode()}\n{process.stdout.decode()}")
 
     # Run QSIPREP (WIP: copy the QC parameters into the MRIQC group report)
     if qsiprep == 'True':
@@ -54,33 +67,22 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
         niifile.unlink()
 
     # Copy the remaining BIDS meta data
-    bidsfolder.mkdir(parents=True, exist_ok=True)
     for subwork in bidswork.glob('sub-*'):
         subfolder = bidsfolder/subwork.name
-        sessions  = sorted(subwork.glob('ses-*'))
         subfolder.mkdir(parents=True, exist_ok=True)
-        for seswork in sessions:        # Account for potential previous session in the sub-folder
+        for seswork in sorted(subwork.glob('ses-*')):       # Account for potential previous session in the sub-folder
             sesfolder = subfolder/seswork.name
             shutil.copytree(seswork, sesfolder)
 
     # Copy the remaining derived (qsiprep) meta data
     for subwork in (bidswork/'derivatives'/'qsiprep').glob('sub-*'):
         subfolder = bidsfolder/'derivatives'/'qsiprep'/subwork.name
-        sessions  = sorted(subwork.glob('ses-*'))
         subfolder.mkdir(parents=True, exist_ok=True)
-        for seswork in sessions:        # Account for potential previous session in the sub-folder
+        for seswork in sorted(subwork.glob('ses-*')):       # Account for potential previous session in the sub-folder
             sesfolder = subfolder/seswork.name
             shutil.copytree(seswork, sesfolder)
 
-    # Copy/update the participants.tsv file to the BIDS sourcefolder and write BIDS metadata to the MRIQC group reports
-    participantsfile = bidsfolder/'participants.tsv'
-    if participantsfile.is_file():
-        olddata = pd.read_csv(participantsfile, sep='\t', index_col='participant_id')
-        newdata = pd.read_csv(bidswork/'participants.tsv', sep='\t', index_col='participant_id')
-        alldata = pd.concat([olddata, newdata])
-        alldata.to_csv(participantsfile, sep='\t')
-    else:
-        shutil.copy(bidswork/'participants.tsv', participantsfile)
+    # Write BIDS metadata to the MRIQC group reports
     mriqc_meta(mriqcfolder)
 
 
