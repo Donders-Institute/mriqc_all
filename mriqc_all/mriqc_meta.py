@@ -40,7 +40,12 @@ def copymetadata(attributes: list, report_tsv: Path, modality: str, dryrun: bool
 
         # Copy the acquisition time from the scans.tsv file to the group report
         scansfile = bidsfolder/sub/ses/f"{sub}{'_' if ses else ''}{ses}_scans.tsv"
-        print(f"Adding data from: {scansfile}")
+        if scansfile.is_file():
+            print(f"Adding data from: {scansfile}")
+        else:                                               # Could be due to concurrency issues
+            if 'meta.AcquisitionTime' not in report.index or not report.loc[bidsname, 'meta.AcquisitionTime']:
+                print(f"ERROR: Could not find {scansfile}\nExisting data:\n{report.loc[bidsname]}")
+            continue
         scansdata = pd.read_csv(scansfile, sep='\t', index_col='filename')
         scanpath  = f"{modality}/{bidsname}.nii"
         report.loc[bidsname, 'meta.AcquisitionTime'] = scansdata.loc[scanpath, 'acq_time']
