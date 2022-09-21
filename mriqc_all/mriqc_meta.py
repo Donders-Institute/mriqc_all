@@ -4,6 +4,7 @@
 import argparse
 import pandas as pd
 import json
+import time
 from pathlib import Path
 
 mriqcdata  = Path('/project/3015999.02/mriqc_data')
@@ -40,11 +41,13 @@ def copymetadata(attributes: list, report_tsv: Path, modality: str, dryrun: bool
 
         # Copy the acquisition time from the scans.tsv file to the group report
         scansfile = bidsfolder/sub/ses/f"{sub}{'_' if ses else ''}{ses}_scans.tsv"
-        if scansfile.is_file():
-            print(f"Adding data from: {scansfile}")
-        else:                                               # Could be due to concurrency issues
-            if 'meta.AcquisitionTime' not in report.index or not report.loc[bidsname, 'meta.AcquisitionTime']:
-                print(f"ERROR: Could not find {scansfile}\nExisting data:\n{report.loc[bidsname]}")
+        for t in range(5):
+            if scansfile.is_file():
+                print(f"Adding ({t} minutes delayed) data from: {scansfile}")
+                break
+            time.sleep(1 * 60)                              # Could be due to concurrency issues, so wait a bit and try again
+        if not scansfile.is_file() and ('meta.AcquisitionTime' not in report.index or not report.loc[bidsname, 'meta.AcquisitionTime']):
+            print(f"ERROR: Could not find {scansfile}\nExisting data:\n{report.loc[bidsname]}")
             continue
         scansdata = pd.read_csv(scansfile, sep='\t', index_col='filename')
         scanpath  = f"{modality}/{bidsname}.nii"
@@ -52,6 +55,9 @@ def copymetadata(attributes: list, report_tsv: Path, modality: str, dryrun: bool
 
         # Copy the BIDS metadata from the jsonfile to the group report
         jsonfile = bidsfolder/sub/ses/modality/f"{bidsname}.json"
+        if not jsonfile.is_file():
+            print(f"ERROR: Could not find {jsonfile}")
+            continue
         with jsonfile.open() as jsonfid:
             metadata = json.load(jsonfid)
         for attribute in attributes:

@@ -51,12 +51,8 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
     else:
         shutil.copy(bidswork/'participants.tsv', participantsfile)
 
-    # Run MRIQC participant + group
+    # Run MRIQC participant
     mriqc_run(bidswork, mriqcfolder, '', nosub=True, skip=False)
-    mriqc_group = f"singularity run --cleanenv {os.getenv('DCCN_OPT_DIR')}/mriqc/{os.getenv('MRIQC_VERSION')}/mriqc-{os.getenv('MRIQC_VERSION')}.simg {bidswork} {mriqcfolder} group --nprocs 1"
-    process     = subprocess.run(mriqc_group, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    if process.stderr.decode() or process.returncode != 0:
-        print(f"WARNING {process.returncode}: MRIQC group report failed\n{process.stderr.decode()}\n{process.stdout.decode()}")
 
     # Run QSIPREP (WIP: copy the QC parameters into the MRIQC group report)
     if qsiprep == 'True':
@@ -81,6 +77,12 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
         for seswork in sorted(subwork.glob('ses-*')):       # Account for potential previous session in the sub-folder
             sesfolder = subfolder/seswork.name
             shutil.copytree(seswork, sesfolder)
+
+    # Run MRIQC group
+    mriqc_group = f"singularity run --cleanenv {os.getenv('DCCN_OPT_DIR')}/mriqc/{os.getenv('MRIQC_VERSION')}/mriqc-{os.getenv('MRIQC_VERSION')}.simg {bidswork} {mriqcfolder} group --nprocs 1"
+    process     = subprocess.run(mriqc_group, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    if process.stderr.decode() or process.returncode != 0:
+        print(f"WARNING {process.returncode}: MRIQC group report failed\n{process.stderr.decode()}\n{process.stdout.decode()}")
 
     # Write BIDS metadata to the MRIQC group reports
     mriqc_meta(mriqcfolder)
