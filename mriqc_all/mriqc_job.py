@@ -15,8 +15,9 @@ from pathlib import Path
 
 def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
 
-    rawfolder  = Path(rawfolder)
-    bidsfolder = Path(bidsfolder)
+    rawfolder   = Path(rawfolder)
+    bidsfolder  = Path(bidsfolder)
+    mriqcfolder = Path(mriqcfolder)
 
     # Make a temporary shadow raw directory structure (with dummy sub-/ses- folders) for unstructered (unscheduled) data
     if '^' in rawfolder.name:
@@ -77,6 +78,13 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
         for seswork in sorted(subwork.glob('ses-*')):       # Account for potential previous session in the sub-folder
             sesfolder = subfolder/seswork.name
             shutil.copytree(seswork, sesfolder)
+
+    # Write the processed mriqc project folder to the logs
+    if list(mriqcfolder.glob('sub-*.html')):
+        mriqclog = mriqcfolder.parent/'logs'/(mriqcfolder.name + '.meta')
+        mriqclog.write_text('')
+    else:
+        print(f"WARNING: No subject data found in: {mriqcfolder}")
 
 
 # Shell usage

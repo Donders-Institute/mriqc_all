@@ -88,7 +88,7 @@ def mriqc_meta(project, meta: tuple=('MagneticFieldStrength', 'ManufacturersMode
     elif isinstance(project, str) and project:
         projects = [mriqcdata/project]
     else:
-        projects = [project for project in mriqcdata.iterdir() if '.' in project.name]
+        projects = [mriqcdata/project.stem for project in (mriqcdata/'logs').glob('*.meta')]
 
     # Loop over the MRIQC data-folders and collect the meta data
     for n, project in enumerate(projects, 1):
@@ -101,6 +101,9 @@ def mriqc_meta(project, meta: tuple=('MagneticFieldStrength', 'ManufacturersMode
         else:
             print(f"WARNING: {project} is not an existing project directory")
 
+        # Remove the project log entry
+        (mriqcdata/'logs'/(project.name + '.meta')).unlink(missing_ok=True)
+
 
 def main():
 
@@ -112,7 +115,7 @@ def main():
                                             "  mriqc_meta\n"
                                             "  mriqc_meta -p 3013091.02\n"
                                             "  mriqc_meta -m ProtocolName Acquisitiondate\n ")
-    parser.add_argument('-p','--project', help='The project for which metadata need to be added (default: process all projects)')
+    parser.add_argument('-p','--project', help='The project for which metadata need to be added (default: process all projects in the mriqc_data/logs directory)')
     parser.add_argument('-m','--meta',    help='A list of the json attributes that are added', nargs='+', default=('MagneticFieldStrength', 'ManufacturersModelName', 'StationName', 'SoftwareVersions'))
     parser.add_argument('-d','--dryrun',  help='Add this flag to just print the metadata without actually saving anything', action='store_true')
 
