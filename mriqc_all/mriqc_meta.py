@@ -5,15 +5,24 @@ import argparse
 import pandas as pd
 import json
 import time
+import subprocess
+import os
 from pathlib import Path
 
 mriqcdata  = Path('/project/3015999.02/mriqc_data')
 sourcedata = mriqcdata/'sourcedata'
 
 
-def copymetadata(attributes: list, report_tsv: Path, modality: str, dryrun: bool, participants_tsv):
+def copymetadata(report_tsv: Path, bidsmodality: str, participants_tsv: Path, attributes: list, dryrun: bool):
 
-    # Load the MRIQC group report
+    bidsfolder = sourcedata/report_tsv.parent.name          # e.g. [..]/3015999.02
+
+    # Create & load the MRIQC group report
+    if not report_tsv.is_file() and list(bidsfolder.glob('sub-*')):
+        mriqc_group = f"singularity run --cleanenv {os.getenv('DCCN_OPT_DIR')}/mriqc/{os.getenv('MRIQC_VERSION')}/mriqc-{os.getenv('MRIQC_VERSION')}.simg {bidsfolder} {mriqcdata/bidsfolder.name} group --nprocs 1"
+        process     = subprocess.run(mriqc_group, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        if process.stderr.decode() or process.returncode!=0:
+            print(f"WARNING {process.returncode}: MRIQC group report could not be made\n{process.stderr.decode()}\n{process.stdout.decode()}")
     if report_tsv.is_file():
         print(f"Reading: {report_tsv}")
         report = pd.read_csv(report_tsv, sep='\t')
@@ -22,22 +31,25 @@ def copymetadata(attributes: list, report_tsv: Path, modality: str, dryrun: bool
         print(f"WARNING: {report_tsv} could not be found")
         return
 
-    # Read the participants.tsv file
-    bidsfolder = sourcedata/report_tsv.parent.name          # e.g. [..]/3015999.02
+    if participants_tsv.is_file():
+        participants = pd.read_csv(participants_tsv, sep = '\t', index_col = 'participant_id')
+    else:
+        print(f"WARNING: {participants_tsv} could not be found")
+        return
 
     # Loop over the sessions in the MRIQC report
     for bidsname in report.index:                           # e.g. sub-002_ses-mri01_acq-t1mpragesagipat21p0iso20chheadneck_run-1_T1w
 
         # Parse the (full) subject and session labels
         sub, ses = bidsname.split('_')[0:2]                 # e.g. sub = 'sub-002', ses = ses-mri01
-        if sub not in participants_tsv.index:
+        if sub not in participants.index:
             print(f"ERROR: Could not find {sub} (from {bidsname}) in {bidsfolder}/participants.tsv")
             continue
 
         # Copy sex and age from the particpants.tsv file to the group report
         print(f"Adding data from: {bidsfolder/'participants.tsv'}")
-        report.loc[bidsname, 'meta.Sex'] = participants_tsv.loc[sub, 'sex']
-        report.loc[bidsname, 'meta.Age'] = participants_tsv.loc[sub, 'age']
+        report.loc[bidsname, 'meta.Sex'] = participants.loc[sub, 'sex']
+        report.loc[bidsname, 'meta.Age'] = participants.loc[sub, 'age']
 
         # Copy the acquisition time from the scans.tsv file to the group report
         scansfile = bidsfolder/sub/ses/f"{sub}{'_' if ses else ''}{ses}_scans.tsv"
@@ -50,11 +62,11 @@ def copymetadata(attributes: list, report_tsv: Path, modality: str, dryrun: bool
             print(f"ERROR: Could not find {scansfile}\nExisting data:\n{report.loc[bidsname]}")
             continue
         scansdata = pd.read_csv(scansfile, sep='\t', index_col='filename')
-        scanpath  = f"{modality}/{bidsname}.nii"
+        scanpath  = f"{bidsmodality}/{bidsname}.nii"
         report.loc[bidsname, 'meta.AcquisitionTime'] = scansdata.loc[scanpath, 'acq_time']
 
         # Copy the BIDS metadata from the jsonfile to the group report
-        jsonfile = bidsfolder/sub/ses/modality/f"{bidsname}.json"
+        jsonfile = bidsfolder/sub/ses/bidsmodality/f"{bidsname}.json"
         if not jsonfile.is_file():
             print(f"ERROR: Could not find {jsonfile}")
             continue
@@ -76,19 +88,18 @@ def mriqc_meta(project, meta: tuple=('MagneticFieldStrength', 'ManufacturersMode
     elif isinstance(project, str) and project:
         projects = [mriqcdata/project]
     else:
-        projects = mriqcdata.iterdir()
+        projects = [project for project in mriqcdata.iterdir() if '.' in project.name]
 
     # Loop over the MRIQC data-folders and collect the meta data
-    for project in projects:
+    for n, project in enumerate(projects, 1):
 
         # Read / write the MRIQC group reports
-        print(f"Adding metadata for: {project}")
+        print(f"\n[{n}/{len(projects)}] Adding metadata for: {project}")
         if project.is_dir():
-            participants_tsv = pd.read_csv(sourcedata/project.name/'participants.tsv', sep='\t', index_col='participant_id')
-            copymetadata(meta, project/'group_T1w.tsv', 'anat', dryrun, participants_tsv)
-            copymetadata(meta, project/'group_bold.tsv', 'func', dryrun, participants_tsv)
+            copymetadata(project/'group_T1w.tsv',  'anat', sourcedata/project.name/'participants.tsv', meta, dryrun)
+            copymetadata(project/'group_bold.tsv', 'func', sourcedata/project.name/'participants.tsv', meta, dryrun)
         else:
-            print(f"WARNING: {project} is not an existing directory")
+            print(f"WARNING: {project} is not an existing project directory")
 
 
 def main():

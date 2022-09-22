@@ -4,14 +4,11 @@
 import pandas as pd
 import argparse
 import tempfile
-import subprocess
-import os
 import shutil
 import sys
 sys.path += ['/opt/qsiprep/dccn', '/opt/mriqc/dccn']
 from qsiprep_sub import main as qsiprep_run
 from mriqc_sub import main as mriqc_run
-from mriqc_meta import mriqc_meta as mriqc_meta
 from bidscoin import bidscoiner
 from pathlib import Path
 
@@ -39,7 +36,18 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
         print(f"No subject data found in: {bidswork}")
         return
 
-    # Copy/update the participants.tsv file in the BIDS sourcefolder
+    # Run MRIQC participant
+    mriqc_run(bidswork, mriqcfolder, '', nosub=True, skip=False)
+
+    # Run QSIPREP (WIP: copy the QC parameters into the MRIQC group report)
+    if qsiprep == 'True':
+        qsiprep_run(bidswork, mriqcfolder, '', resolution='automatic', args='--dwi-only', nthreads=1, nosub=True, skip=False)
+
+    # Replace all nifti files with dummies
+    for niifile in bidswork.rglob('sub-*.nii*'):
+        niifile.write_text('')
+
+    # Update the participants.tsv file in the BIDS sourcefolder if it already exists
     participantsfile = bidsfolder/'participants.tsv'
     if participantsfile.is_file():
         olddata = pd.read_csv(participantsfile, sep='\t', index_col='participant_id')
@@ -48,21 +56,13 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
             if participant not in olddata.index:
                 olddata.loc[participant] = newdata.loc[participant]
         olddata.to_csv(participantsfile, sep='\t')
-    else:
-        shutil.copy(bidswork/'participants.tsv', participantsfile)
 
-    # Run MRIQC participant
-    mriqc_run(bidswork, mriqcfolder, '', nosub=True, skip=False)
+    # Copy the mandatory root files
+    for rootfile in ('README', 'dataset_description.json', 'participants.tsv'):
+        if not (bidsfolder/rootfile).is_file():
+            shutil.copy(bidswork/rootfile, bidsfolder/rootfile)
 
-    # Run QSIPREP (WIP: copy the QC parameters into the MRIQC group report)
-    if qsiprep == 'True':
-        qsiprep_run(bidswork, mriqcfolder, '', resolution='automatic', args='--dwi-only', nthreads=1, nosub=True, skip=False)
-
-    # Remove all nifti files
-    for niifile in bidswork.rglob('sub-*.nii*'):
-        niifile.unlink()
-
-    # Copy the remaining BIDS meta data
+    # Copy the BIDS meta data in each session
     for subwork in bidswork.glob('sub-*'):
         subfolder = bidsfolder/subwork.name
         subfolder.mkdir(parents=True, exist_ok=True)
@@ -70,22 +70,13 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
             sesfolder = subfolder/seswork.name
             shutil.copytree(seswork, sesfolder)
 
-    # Copy the remaining derived (qsiprep) meta data
+    # Copy the derived (qsiprep) meta data
     for subwork in (bidswork/'derivatives'/'qsiprep').glob('sub-*'):
         subfolder = bidsfolder/'derivatives'/'qsiprep'/subwork.name
         subfolder.mkdir(parents=True, exist_ok=True)
         for seswork in sorted(subwork.glob('ses-*')):       # Account for potential previous session in the sub-folder
             sesfolder = subfolder/seswork.name
             shutil.copytree(seswork, sesfolder)
-
-    # Run MRIQC group
-    mriqc_group = f"singularity run --cleanenv {os.getenv('DCCN_OPT_DIR')}/mriqc/{os.getenv('MRIQC_VERSION')}/mriqc-{os.getenv('MRIQC_VERSION')}.simg {bidswork} {mriqcfolder} group --nprocs 1"
-    process     = subprocess.run(mriqc_group, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    if process.stderr.decode() or process.returncode != 0:
-        print(f"WARNING {process.returncode}: MRIQC group report failed\n{process.stderr.decode()}\n{process.stdout.decode()}")
-
-    # Write BIDS metadata to the MRIQC group reports
-    mriqc_meta(mriqcfolder)
 
 
 # Shell usage
