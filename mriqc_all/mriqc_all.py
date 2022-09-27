@@ -26,6 +26,11 @@ def run_mriqc_all(date: str, outfolder: str, qsiprep: bool=False, force: bool=Fa
                     print(f"NB: SKIPPING TODAY's FOLDER: {datefolder}")
                     continue
                 datefolders += [datefolder]
+    elif date in ('failed', 'running'):
+        datefolders = []
+        for datefolder in [logfile.stem.split('_')[0] for logfile in (outfolder/'logs').glob(f"*.{date}")]:
+            datefolders += [catchallraw/datefolder[0:4]/datefolder]
+        datefolders = set(datefolders)
     else:
         try:
             datetime = dateutil.parser.parse(date)
@@ -68,6 +73,11 @@ def run_mriqc_all(date: str, outfolder: str, qsiprep: bool=False, force: bool=Fa
                 print(f"Skipping quasi organized data in: {rawfolder}")
                 continue
 
+            # Skip the Siemens Service data
+            if '^Service^' in rawfolder.name:
+                print(f"Skipping Siemens service data in: {rawfolder}")
+                continue
+
             # Process the raw data-folder
             mriqcfolder = outfolder/rawfolder.name
             bidsfolder  = outfolder/'sourcedata'/rawfolder.name
@@ -98,7 +108,7 @@ def main():
                                             "  run_mriqc_all -d today -f\n"
                                             "  run_mriqc_all -d all\n"
                                             "  run_mriqc_all -o test/mriqc_data\n ")
-    parser.add_argument('-d','--date',      help='The date of the catch_all/raw/year/[date]/ folders that needs to be run', default='yesterday')
+    parser.add_argument('-d','--date',      help='The date of the catch_all/raw/year/[date]/ folders that needs to be run. Use "all" to process all data, "running" or "failed" to re-run running/failed jobs (see files in the log-directory)', default='yesterday')
     parser.add_argument('-o','--outfolder', help='The mriqc output folder', default='/project/3015999.02/mriqc_data')
     parser.add_argument('-q','--qsiprep',   help='If this flag is given data will also be processed using qsiprep', action='store_true')
     parser.add_argument('-f','--force',     help='If this flag is given data will be processed, regardless of existing logfiles in the log-folder', action='store_true')

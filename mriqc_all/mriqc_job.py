@@ -19,6 +19,9 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
     bidsfolder  = Path(bidsfolder)
     mriqcfolder = Path(mriqcfolder)
 
+    running = mriqcfolder.parent/'logs'/f"{rawfolder.parent.name}_{rawfolder.name}.running"
+    running.write_text(bidsfolder.as_posix())
+
     # Make a temporary shadow raw directory structure (with dummy sub-/ses- folders) for unstructered (unscheduled) data
     if '^' in rawfolder.name:
         sub = rawfolder.name                    # e.g. JurCla^Prisma_090135.023000
@@ -83,8 +86,10 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
     if list(mriqcfolder.glob('sub-*.html')):
         mriqclog = mriqcfolder.parent/'logs'/(mriqcfolder.name + '.meta')
         mriqclog.write_text('')
+        running.unlink()
     else:
         print(f"WARNING: No subject data found in: {mriqcfolder}")
+        running.rename(running.with_suffix('.failed'))
 
 
 # Shell usage
