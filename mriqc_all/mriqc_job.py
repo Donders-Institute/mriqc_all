@@ -26,7 +26,7 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
     if '^' in rawfolder.name:
         sub = rawfolder.name                    # e.g. JurCla^Prisma_090135.023000
         ses = rawfolder.name.split('_', 2)[1]   # e.g. 090135.023000
-        rawshadow = Path(tempfile.mkdtemp())/'sourcedata'/rawfolder.name
+        rawshadow = Path(tempfile.gettempdir())/'sourcedata'/rawfolder.name
         subfolder = rawshadow/f"sub-{sub}"
         subfolder.mkdir(parents=True)
         (subfolder/f"ses-{ses}").symlink_to(rawfolder)
@@ -34,10 +34,11 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
 
     # Convert the rawfolder to a BIDS workfolder
     print(f">>> Processing {rawfolder}")
-    bidswork = Path(tempfile.mkdtemp())/bidsfolder.name
+    bidswork = Path(tempfile.gettempdir())/bidsfolder.name
     bidscoiner.bidscoiner(rawfolder, bidswork, bidsmapfile=bidsmapfile)
     if not list(bidswork.glob('sub-*')):
         print(f"No subject data found in: {bidswork}")
+        running.rename(running.with_suffix('.failed'))
         return
 
     # Run MRIQC participant
