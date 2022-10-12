@@ -43,8 +43,15 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
             running.rename(running.with_suffix('.empty'))
             return
 
-        # Run MRIQC participant
+        # Run MRIQC participant and write the processed mriqc project folder to the logs
         mriqc_run(bidswork, mriqcfolder, '', nosub=True, skip=False)
+        if list(mriqcfolder.glob('sub-*.html')):
+            mriqclog = mriqcfolder.parent/'logs'/(mriqcfolder.name + '.meta')
+            mriqclog.write_text('')
+            running.unlink()
+        else:
+            print(f"WARNING: No mriqc data found in: {mriqcfolder}")
+            running.rename(running.with_suffix('.noreport'))
 
         # Run QSIPREP (WIP: copy the QC parameters into the MRIQC group report)
         if qsiprep == 'True':
@@ -84,15 +91,6 @@ def main(rawfolder, bidsfolder, bidsmapfile, mriqcfolder, qsiprep):
             for seswork in sorted(subwork.glob('ses-*')):       # Account for potential previous session in the sub-folder
                 sesfolder = subfolder/seswork.name
                 shutil.copytree(seswork, sesfolder)
-
-        # Write the processed mriqc project folder to the logs
-        if list(mriqcfolder.glob('sub-*.html')):
-            mriqclog = mriqcfolder.parent/'logs'/(mriqcfolder.name + '.meta')
-            mriqclog.write_text('')
-            running.unlink()
-        else:
-            print(f"WARNING: No subject data found in: {mriqcfolder}")
-            running.rename(running.with_suffix('.empty'))
 
     except Exception as joberror:
 
